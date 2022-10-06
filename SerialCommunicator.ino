@@ -7,8 +7,7 @@ void setup()
   digitalWrite(4, HIGH);
 }
 
-uint8_t size_data_for_commands[] = { 5, 6 };
-uint8_t size_recieve_data_for_commands[] = { 6, 6 };
+uint8_t size_recieve_data_for_commands[] = { 6, 6, 7, 17 };
 uint8_t data[SIZE_BUFER];
 int lenght_message;
 
@@ -16,6 +15,9 @@ void loop()
 {
   while (true)
   {
+    int8_t arr[13] = {3,   1,   1,   1,   1,   0,   0,   0,   0,   0,   0,   0,   0};
+    Serial.println(int(CRC_hash(arr,9)));
+    delay(10000);
     if (Serial.available())
     {
       lenght_message = Serial.readBytes(data, SIZE_BUFER);
@@ -24,13 +26,14 @@ void loop()
       {
         delay(200);
         Serial.readBytes(data, SIZE_BUFER);
-        data[0] = 1;
-        Serial.print(data[0]);
+        data[0] = 0;
+        Serial.write(data, 1);
         continue;
       }
 
       int hash = CRC_hash(data, lenght_message - 4);
-      bool is_correct_hash= true;
+      Serial.println(hash);
+      bool is_correct_hash = true;
       for (int i = lenght_message - 4, it = 3; i < lenght_message; ++i, it--)
       {
         if ( data[i] != (( hash >> (it*8) ) & 0xFF) )
@@ -40,7 +43,7 @@ void loop()
         }
       }
 
-      if (!is_correct_hash) { continue; }
+      if (!is_correct_hash) { data[0] = 0; Serial.write(data, 1); continue; }
 
       input_handler(data[0], data, lenght_message);
 
@@ -73,6 +76,23 @@ void input_handler(const int cmd_num, uint8_t* data, int& size)
     data[1] =  analogRead(pin) & 0xFF;
     size = 2;
   }
+  else if (cmd_num == 2)
+  {
+    digitalWrite(data[1], bool(data[2]) ? HIGH : LOW);
+    data[0] = 0;    
+    Serial.write(data, 1);
+    size = 0;
+  }
+  else if (cmd_num == 3)
+  {
+    for (int i = 1; i < 13; ++i)
+    {
+      digitalWrite(i + 1, bool(data[i]) ? HIGH : LOW);
+    }
+    data[0] = 0;
+    Serial.write(data, 1);
+    size = 0;
+  }
 
   return;
 }
@@ -85,7 +105,7 @@ int CRC_hash(const uint8_t* data, const int size)
     int highorder = hash & 0xf8000000;
     hash = hash << 5;
     hash = hash ^ (highorder >> 27);
-    hash = hash ^ (data[i]);
+    hash = hash ^ data[i];
   } 
 
   return hash;
