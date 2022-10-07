@@ -24,8 +24,8 @@ class Arduino_control:
         self.port = -1
         self.hash = func_hash
         self.size_hash = size_hash
-        self.size_data_for_commands = [6, 6, 7, 17, 5]
-        self.size_recieve_data_for_commands = [5, 6, 1, 1, 16]
+        self.size_data_for_commands = [6, 6, 7, 7, 5]
+        self.size_recieve_data_for_commands = [5, 6, 1, 1, 6]
         self.limit_waiting = 10
         self.limit_attempt = 3
 
@@ -119,9 +119,10 @@ class Arduino_control:
     def get_stream_data(self, pin : int, is_digital : bool = True):
         is_end : list[bool] = [False]
         thread = threading.Thread(target=self.__thread_for__stream, args=(is_end, pin, is_digital))
-        print("!>> Введите любое значение для остановки поточного приема данных")
+        print("!>> Нажмите клавишу 'esc' для остановки поточного приема данных")
         thread.start()
-        keyboard.read_key()
+        keyboard.wait("esc")
+        #keyboard.read_key()
         is_end[0] = True
         thread.join()
         print("!>> Поточный прием данных остановлен!")
@@ -155,11 +156,17 @@ class Arduino_control:
 
         values = [bool(elem) for elem in values]
 
-        data = np.array(np.zeros(self.size_data_for_commands[num_cmd]), dtype='uint8')
+        bit_values : int = 0
+        for i in range(0, 12):
+            bit_values = bit_values << 1
+            bit_values = bit_values | (values[i] & 1)
 
+        data = np.array(np.zeros(self.size_data_for_commands[num_cmd]), dtype='uint8')
+        
         data[0] = num_cmd
-        data[1:13] = values
-        data[-self.size_hash : ] = self.hash(data[:13])
+        data[1] = (bit_values & 0xFF00) >> 8
+        data[2] = bit_values & 0x00FF
+        data[-self.size_hash : ] = self.hash(data[ : 3])
 
         print("~ wait data...", end='')
 
@@ -194,10 +201,9 @@ class Arduino_control:
             print(f"\rНе удалось получить значение (invalid hash)")
         else:
             print("\r")
-            pin_data = responce[ : -self.size_hash]
-            i = 2
-            for value in pin_data:
-                print(f"pin({i}) -> {value}")
+            pin_data = (responce[0] << 8) + responce[1]
+            for i in range(2, 14):
+                print(f"pin({i}) -> {(pin_data >> (13 - i) & 1)}")
                 i += 1
 
     def set_PWM(self, pin : int, value : int):
