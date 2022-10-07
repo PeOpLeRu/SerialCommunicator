@@ -22,8 +22,8 @@ class Arduino_control:
         self.port = -1
         self.hash = func_hash
         self.size_hash = size_hash
-        self.size_data_for_commands = [6, 6, 7, 17]
-        self.size_recieve_data_for_commands = [5, 6, 1, 1]
+        self.size_data_for_commands = [6, 6, 7, 17, 5]
+        self.size_recieve_data_for_commands = [5, 6, 1, 1, 16]
         self.limit_waiting = 10
         self.limit_attempt = 3
 
@@ -98,7 +98,7 @@ class Arduino_control:
         is_error = False
         while True:
             self.write(data)
-            responce = [int(_byte) for _byte in self.read(num_cmd)]
+            responce = [int(_byte) for _byte in self.s.read(self.size_recieve_data_for_commands[num_cmd])]
             safe_counter += 1
             if responce[-4:] == self.hash(responce[0:-4]) or safe_counter >= self.limit_attempt:
                 if responce[-4:] != self.hash(responce[0:-4]):
@@ -158,6 +158,39 @@ class Arduino_control:
 
         print(f"\rЗначение установлено!")
 
+    def get_values(self):
+        num_cmd = 0x4
+
+        data = np.array(np.zeros(self.size_data_for_commands[num_cmd]), dtype='uint8')
+
+        data[0] = num_cmd
+        data[-self.size_hash : ] = self.hash(data[ : 1])
+
+        print("~ wait data...", end='')
+
+        safe_counter = 0
+        is_error = False
+        while True:
+            self.write(data)
+            responce = [int(_byte) for _byte in self.s.read(self.size_recieve_data_for_commands[num_cmd])]
+            safe_counter += 1
+            if responce[-4:] == self.hash(responce[0:-4]) or safe_counter >= self.limit_attempt:
+                if responce[-4:] != self.hash(responce[0:-4]):
+                    is_error = True
+                break
+
+            print("\r~ rewait data (hash error)...", end='')
+
+        if is_error:
+            print(f"\rНе удалось получить значение (invalid hash)")
+        else:
+            print("\r")
+            pin_data = responce[ : -self.size_hash]
+            i = 2
+            for value in pin_data:
+                print(f"pin({i}) -> {value}")
+                i += 1
+
     def set_PWM(self, pin : int, value : int):
         pass
 
@@ -178,7 +211,9 @@ class Handler:
 
     def input_handler(self, cmd : str):
         try:
-            if "get a " in cmd:
+            if "get d values" in cmd:
+                self.aduino_c.get_values()
+            elif "get a " in cmd:
                 if self.is_stream_data:
                     self.aduino_c.get_stream_data(pin=int(cmd.split(' ')[2]), is_digital=False)
                 else:
@@ -219,6 +254,7 @@ class Handler:
         Арргументы для команд указаны в []
         get a [0] <---> Получить данные с [0] аналового пина ([0] = номер пина)
         get d [0] <---> Получить данные с [0] цифрового пина ([0] = номер пина)
+        get d values <---> Получить данные со всех цифровых пинов
         set d [0] [1] <---> Установить значение для цифрового пина с номером [0] на значение [1] (тип boolean)
         set d values [2 3 4 5 6 7 8 9 10 11 12 13] <---> Установить ряд значений для цифровых пинов -> индексация со 2 пинана значение типа boolean, указывать всю последовательность не обязательно
         set data=stream <---> Установить способ получения данных от МК на потоковый

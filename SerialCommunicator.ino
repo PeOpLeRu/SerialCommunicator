@@ -11,7 +11,7 @@ void setup()
   digitalWrite(4, HIGH);
 }
 
-uint8_t size_recieve_data_for_commands[] = { 6, 6, 7, 17 };
+uint8_t size_recieve_data_for_commands[] = { 6, 6, 7, 17, 5 };
 uint8_t data[SIZE_BUFER];
 int lenght_message;
 
@@ -98,6 +98,14 @@ void input_handler(const int cmd_num, uint8_t* data, int& size)
     data[0] = 0;
     Serial.write(data, 1);
     size = 0;
+  }
+  else if (cmd_num == 4)
+  {
+    for (int i = 2, it = 0; i < 14; ++i, ++it)
+    {
+      data[it] = digitalRead(i);
+    }
+    size = 12;
   }
 
   return;
