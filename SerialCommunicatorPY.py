@@ -7,9 +7,9 @@ import time
 def CRC_hash(data : list[int]):
     hash = 0
     for elem in data:
-        highorder = hash & 0xf8000000
+        highorder = ((hash & 0xf8000000) >> 27) & 0x0F8
         hash = hash << 5
-        hash = hash ^ (highorder >> 27)
+        hash = hash ^ highorder
         hash = hash ^ (elem & 0xFF)
 
     res = [((hash>>i)&0xFF) for i in range(24, -1, -8)]
@@ -155,6 +155,8 @@ class Arduino_control:
         print("~ wait data...", end='')
 
         self.write(data)
+        
+        print([int(i) for i in self.s.read(self.s.inWaiting())])
 
         print(f"\rЗначение установлено!")
 

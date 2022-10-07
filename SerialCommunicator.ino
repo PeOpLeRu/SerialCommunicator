@@ -2,6 +2,10 @@
 
 void setup()
 {
+  for (int i = 2; i < 14; ++i)
+  {
+    pinMode(i, OUTPUT);
+  }
   Serial.begin(9600);
   digitalWrite(3, LOW);
   digitalWrite(4, HIGH);
@@ -15,9 +19,6 @@ void loop()
 {
   while (true)
   {
-    int8_t arr[13] = {3,   1,   1,   1,   1,   0,   0,   0,   0,   0,   0,   0,   0};
-    Serial.println(int(CRC_hash(arr,9)));
-    delay(10000);
     if (Serial.available())
     {
       lenght_message = Serial.readBytes(data, SIZE_BUFER);
@@ -26,24 +27,42 @@ void loop()
       {
         delay(200);
         Serial.readBytes(data, SIZE_BUFER);
-        data[0] = 0;
+        data[0] = 1;
         Serial.write(data, 1);
         continue;
       }
 
-      int hash = CRC_hash(data, lenght_message - 4);
-      Serial.println(hash);
+     uint32_t hash = CRC_hash(data, lenght_message - 4);
+      //   uint8_t data_hash[4];
+      // data_hash[0] = (hash>>24) & 0xFF;
+      //   data_hash[1] = (hash>>16) & 0xFF;
+      //   data_hash[2] = (hash>>8) & 0xFF;
+      //   data_hash[3] = hash & 0xFF;
+      //   int ssize =4;
+      //   Serial.write(data_hash, ssize);
+
       bool is_correct_hash = true;
       for (int i = lenght_message - 4, it = 3; i < lenght_message; ++i, it--)
       {
-        if ( data[i] != (( hash >> (it*8) ) & 0xFF) )
+        if (data[i] != ((hash >> (it * 8)) & 0xFF))
         {
           is_correct_hash = false;
           break;
         }
       }
 
-      if (!is_correct_hash) { data[0] = 0; Serial.write(data, 1); continue; }
+      if (!is_correct_hash)
+      { 
+        uint8_t data_hash[4];
+        data_hash[0] = (hash>>24) & 0xFF;
+        data_hash[1] = (hash>>16) & 0xFF;
+        data_hash[2] = (hash>>8) & 0xFF;
+        data_hash[3] = hash & 0xFF;
+        int ssize =4;
+        data[0] = 9;
+        Serial.write(data_hash, ssize);
+        continue; 
+      }
 
       input_handler(data[0], data, lenght_message);
 
@@ -97,12 +116,14 @@ void input_handler(const int cmd_num, uint8_t* data, int& size)
   return;
 }
 
-int CRC_hash(const uint8_t* data, const int size)
+int32_t CRC_hash(const uint8_t* data, const int size)
 {
-  int hash = 0;
+  int32_t hash = 0;
+  uint32_t highorder = 0;
+  
   for (int i = 0; i < size; ++i)
   {
-    int highorder = hash & 0xf8000000;
+    highorder = hash & 0xf8000000;
     hash = hash << 5;
     hash = hash ^ (highorder >> 27);
     hash = hash ^ data[i];
