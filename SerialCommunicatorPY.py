@@ -3,6 +3,8 @@ import numpy as np
 import serial
 import serial.tools.list_ports
 import time
+import threading
+import keyboard
 
 def CRC_hash(data : list[int]):
     hash = 0
@@ -115,7 +117,14 @@ class Arduino_control:
             print(f"\rValue from pin (A{pin}) === {int(responce[0] << 8) + int(responce[1])}")
 
     def get_stream_data(self, pin : int, is_digital : bool = True):
-        pass
+        is_end : list[bool] = [False]
+        thread = threading.Thread(target=self.__thread_for__stream, args=(is_end, pin, is_digital))
+        print("!>> Введите любое значение для остановки поточного приема данных")
+        thread.start()
+        keyboard.read_key()
+        is_end[0] = True
+        thread.join()
+        print("!>> Поточный прием данных остановлен!")
 
     def set_value(self, pin : int, value : int):
         num_cmd = 0x2
@@ -202,6 +211,10 @@ class Arduino_control:
             print(f"Не подключено")
 
         print(f"Алгоритм хеширования данных при передаче: {str(self.hash)}")
+
+    def __thread_for__stream(self, is_end : list[bool], pin : int, is_digital : bool):
+        while not is_end[0]:
+            self.get_block_data(pin, is_digital)
 
 class Handler:
     def __init__(self, aduino_c : Arduino_control):
