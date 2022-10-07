@@ -60,7 +60,7 @@ class Arduino_control:
                 raise "\rattempt error!"
             if self.s.inWaiting() == 1:
                 response = int(self.s.read(1)[0])
-                if response == 1:
+                if response == 2 or response == 1:
                     self.s.write(data.tobytes())
                     safe_counter += 1
                 elif response == 0:
@@ -155,8 +155,6 @@ class Arduino_control:
         print("~ wait data...", end='')
 
         self.write(data)
-        
-        print([int(i) for i in self.s.read(self.s.inWaiting())])
 
         print(f"\rЗначение установлено!")
 

@@ -33,13 +33,6 @@ void loop()
       }
 
      uint32_t hash = CRC_hash(data, lenght_message - 4);
-      //   uint8_t data_hash[4];
-      // data_hash[0] = (hash>>24) & 0xFF;
-      //   data_hash[1] = (hash>>16) & 0xFF;
-      //   data_hash[2] = (hash>>8) & 0xFF;
-      //   data_hash[3] = hash & 0xFF;
-      //   int ssize =4;
-      //   Serial.write(data_hash, ssize);
 
       bool is_correct_hash = true;
       for (int i = lenght_message - 4, it = 3; i < lenght_message; ++i, it--)
@@ -53,14 +46,8 @@ void loop()
 
       if (!is_correct_hash)
       { 
-        uint8_t data_hash[4];
-        data_hash[0] = (hash>>24) & 0xFF;
-        data_hash[1] = (hash>>16) & 0xFF;
-        data_hash[2] = (hash>>8) & 0xFF;
-        data_hash[3] = hash & 0xFF;
-        int ssize =4;
-        data[0] = 9;
-        Serial.write(data_hash, ssize);
+        data[0] = 2;
+        Serial.write(data, 1);
         continue; 
       }
 
