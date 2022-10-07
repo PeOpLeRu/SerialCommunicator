@@ -11,7 +11,7 @@ void setup()
   digitalWrite(4, HIGH);
 }
 
-uint8_t size_recieve_data_for_commands[] = { 6, 6, 7, 17, 5 };
+uint8_t size_recieve_data_for_commands[] = { 6, 6, 7, 7, 5 };
 uint8_t data[SIZE_BUFER];
 int lenght_message;
 
@@ -91,9 +91,10 @@ void input_handler(const int cmd_num, uint8_t* data, int& size)
   }
   else if (cmd_num == 3)
   {
-    for (int i = 1; i < 13; ++i)
+    int bit_values = (data[1] << 8) + data[2];
+    for (int pin = 2; pin < 14; ++pin)
     {
-      digitalWrite(i + 1, bool(data[i]) ? HIGH : LOW);
+      digitalWrite(pin, bool( (bit_values >> (13 - pin)) & 1) ? HIGH : LOW);
     }
     data[0] = 0;
     Serial.write(data, 1);
@@ -101,11 +102,15 @@ void input_handler(const int cmd_num, uint8_t* data, int& size)
   }
   else if (cmd_num == 4)
   {
-    for (int i = 2, it = 0; i < 14; ++i, ++it)
+    int bit_values = 0;
+    for (int i = 2; i < 14; ++i)
     {
-      data[it] = digitalRead(i);
+      bit_values = bit_values << 1;
+      bit_values = bit_values | ( bool(digitalRead(i)) & 1);
     }
-    size = 12;
+    data[0] = (bit_values >> 8) & 0xFF;
+    data[1] = bit_values & 0xFF;
+    size = 2;
   }
 
   return;
